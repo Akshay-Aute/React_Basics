@@ -5,7 +5,7 @@ import appwriteService from "../../appwrite/config";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-export default function PostForm({post}) {
+export default function PostForm({ post }) {
   const { register, handleSubmit, watch, setValue, control, getValues } =
     useForm({
       defaultValues: {
@@ -18,16 +18,14 @@ export default function PostForm({post}) {
 
   const navigate = useNavigate();
   const userData = useSelector((state) => state.auth.userData);
-  
+
   const submit = async (data) => {
-    // 🚀 FIX 1: Add a check for a valid slug/document ID for new posts.
-    // This prevents the AppwriteException: Missing required parameter: "documentId"
     if (!post && (!data.slug || data.slug.length === 0)) {
-        console.error("Submission blocked: Title is required to generate a slug.");
-        alert("Please enter a Title to create the post.");
-        return;
+      alert("Please enter a Title to create the post.");
+      return;
     }
-    
+
+    // --- UPDATE POST LOGIC (This part is fine) ---
     if (post) {
       const file = data.image[0]
         ? await appwriteService.uploadFile(data.image[0])
@@ -46,27 +44,32 @@ export default function PostForm({post}) {
         navigate(`/post/${dbPost.$id}`);
       }
     } else {
+      // --- CREATE NEW POST LOGIC (This is the fix) ---
       const file = await appwriteService.uploadFile(data.image[0]);
 
       if (file) {
         const fileId = file.$id;
-        data.featuredImage = fileId;
-        
-        // Data already includes the slug from the form
+
+        // This is the clean data object that includes the 'userId'
+        // and removes the extra 'image' field.
         const dbPost = await appwriteService.createPost({
-          ...data,
-          userId: userData.$id,
+          title: data.title,
+          slug: data.slug,
+          content: data.content,
+          featuredImage: fileId,
+          status: data.status,
+          userId: userData.$id, // <-- Here is the userId
         });
 
         if (dbPost) {
           navigate(`/post/${dbPost.$id}`);
         }
       } else {
-          console.error("File upload failed, preventing post creation.");
+        console.error("File upload failed, preventing post creation.");
       }
     }
   };
-  
+
   const slugTransform = useCallback((value) => {
     if (value && typeof value === "string")
       return value
@@ -79,7 +82,7 @@ export default function PostForm({post}) {
   React.useEffect(() => {
     const subscription = watch((value, { name }) => {
       if (name === "title") {
-       setValue("slug", slugTransform(value.title), { shouldValidate: true });
+        setValue("slug", slugTransform(value.title), { shouldValidate: true });
       }
     });
 
@@ -87,7 +90,7 @@ export default function PostForm({post}) {
       subscription.unsubscribe();
     };
   }, [watch, slugTransform, setValue]);
-  
+
   return (
     <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
       <div className="w-2/3 px-2">
@@ -126,8 +129,7 @@ export default function PostForm({post}) {
         {post && (
           <div className="w-full mb-4">
             <img
-              // 🚀 FIX 2: Swapped getFilePreview for getFileUrl to fix Appwrite block
-              src={appwriteService.getFileUrl(post.featuredImage)} 
+              src={appwriteService.getFileUrl(post.featuredImage)}
               alt={post.title}
               className="rounded-lg"
             />

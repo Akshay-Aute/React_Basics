@@ -14,28 +14,25 @@ export class Service {
     this.bucket = new Storage(this.client);
   }
 
-  async createPost({ slug, title, content, featuredImage, status, userId }) {
+  async createPost({ title, slug, content, featuredImage, status, userId }) {
+    // <-- 1. ADD userId HERE
     try {
-      if (!slug) {
-        throw new Error("Slug is required for documentId.");
-      }
-
-      // Appwrite createDocument requires (DB ID, Collection ID, Document ID, Data)
       return await this.databases.createDocument(
         conf.appwriteDatabaseId,
         conf.appwriteCollectionId,
-        slug, // <--- Now correctly using the destructured slug as Document ID
+        slug, // This is your Document ID
         {
+          // This is the data object
           title,
           content,
           featuredImage,
           status,
-          userId,
+          userId, // <-- 2. ADD userId HERE
         }
       );
     } catch (error) {
       console.log("Appwrite Error :: createPost :: ", error);
-      return false;
+      throw error;
     }
   }
   async updatePost(slug, { title, content, featuredImage, status }) {
