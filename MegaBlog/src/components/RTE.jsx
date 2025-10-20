@@ -11,9 +11,11 @@ import { Controller } from 'react-hook-form'
         control={control} 
         render={({field:{onChange}})=>(
             <Editor 
+            tinymceScriptSrc= '/tinymce/tinymce.min.js'
+            // tinymceScriptSrc={'/tinymce/tinymce.min.js'}
+            // licenseKey='gpl'
             initialValue={defaultValue}
         init={{
-            apiKey:'no-api-key',
             initialValue: defaultValue,
             height: 500,
             menubar: true,

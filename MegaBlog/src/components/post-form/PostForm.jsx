@@ -18,7 +18,16 @@ export default function PostForm({post}) {
 
   const navigate = useNavigate();
   const userData = useSelector((state) => state.auth.userData);
+  
   const submit = async (data) => {
+    // 🚀 FIX 1: Add a check for a valid slug/document ID for new posts.
+    // This prevents the AppwriteException: Missing required parameter: "documentId"
+    if (!post && (!data.slug || data.slug.length === 0)) {
+        console.error("Submission blocked: Title is required to generate a slug.");
+        alert("Please enter a Title to create the post.");
+        return;
+    }
+    
     if (post) {
       const file = data.image[0]
         ? await appwriteService.uploadFile(data.image[0])
@@ -42,6 +51,8 @@ export default function PostForm({post}) {
       if (file) {
         const fileId = file.$id;
         data.featuredImage = fileId;
+        
+        // Data already includes the slug from the form
         const dbPost = await appwriteService.createPost({
           ...data,
           userId: userData.$id,
@@ -50,9 +61,12 @@ export default function PostForm({post}) {
         if (dbPost) {
           navigate(`/post/${dbPost.$id}`);
         }
+      } else {
+          console.error("File upload failed, preventing post creation.");
       }
     }
   };
+  
   const slugTransform = useCallback((value) => {
     if (value && typeof value === "string")
       return value
@@ -73,6 +87,7 @@ export default function PostForm({post}) {
       subscription.unsubscribe();
     };
   }, [watch, slugTransform, setValue]);
+  
   return (
     <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
       <div className="w-2/3 px-2">
@@ -111,7 +126,8 @@ export default function PostForm({post}) {
         {post && (
           <div className="w-full mb-4">
             <img
-              src={appwriteService.getFilePreview(post.featuredImage)}
+              // 🚀 FIX 2: Swapped getFilePreview for getFileUrl to fix Appwrite block
+              src={appwriteService.getFileUrl(post.featuredImage)} 
               alt={post.title}
               className="rounded-lg"
             />
